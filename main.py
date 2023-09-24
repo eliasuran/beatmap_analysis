@@ -9,7 +9,7 @@ def get_beatmap_info(url, driver):
     driver.get(url)
 
     wait = WebDriverWait(driver, 10)
-    wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, "a.beatmapset-header__details-text-link")))
+    wait.until(EC.element_to_be_clickable((By.CSS_SELECTOR, "a.beatmapset-header__details-text-link")))
 
     page_source = driver.page_source
 
@@ -28,12 +28,26 @@ def get_beatmap_info(url, driver):
 
     # map info
     mapper = soup.find("a", class_="js-usercard beatmapset-mapping__user").text
-    stats_info_elements = soup.find_all("time", class_="js-tooltip-time")
-    if len(stats_info_elements) >= 2:
-        submitted = stats_info_elements[0].text
-        ranked = stats_info_elements[1].text
+    stats_info_elements = soup.find_all("time")
+
+    if len(stats_info_elements) >= 1:
+        if stats_info_elements[0].get("class") == ["js-tooltip-time"] and stats_info_elements[0].text is not None:
+            submitted = stats_info_elements[0].text
+        elif stats_info_elements[0].get("class") == ["js-timeago"]:
+            submitted = stats_info_elements[0].text
+        else:
+            submitted = ""
     else:
         submitted = ""
+
+    if len(stats_info_elements) >= 2:
+        if stats_info_elements[1].get("class") == ["js-tooltip-time"] and stats_info_elements[1].text is not None:
+            ranked = stats_info_elements[1].text
+        elif stats_info_elements[1].get("class") == ["js-timeago"]:
+            ranked = stats_info_elements[1].text
+        else:
+            ranked = ""
+    else:
         ranked = ""
 
     print(f"\nMap Info \nMapper: {mapper} \nSubmitted: {submitted} \nRanked: {ranked}")
@@ -68,7 +82,16 @@ while True:
         get_beatmap_info(inp, webdriver)
         download = input("\nDownload beatmap? [y/n]: ").lower()
         if download == "y":
-            print("Downloading beatmap...")
+            try:
+                download_button = WebDriverWait(webdriver, 10).until(
+                    EC.presence_of_element_located(
+                        (By.CSS_SELECTOR, "button.btn-osu-big btn-osu-big--beatmapset-header js-user-link")
+                    )
+                )
+                download_button.click()
+                print("Downloading beatmap...")
+            except Exception as e:
+                print(f"Failed to click download button: {e}")
         break
     else:
         print("Invalid URL")
